@@ -331,7 +331,7 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
 
       {/* OrderBook sell-content */}
       {(tabOrder === 1 || tabOrder === 3) && (
-        <OrderBookDetail display="asks" asks={asks} />
+        <OrderBookDetail display="asks" asks={asks} bids={bids} />
       )}
 
       {/* OrderBook ticker */}
@@ -367,7 +367,7 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
 
       {/* OrderBook buy-content */}
       {(tabOrder === 1 || tabOrder === 2) && (
-        <OrderBookDetail display="bids" bids={bids} />
+        <OrderBookDetail display="bids" bids={bids} asks={asks} />
       )}
 
       {/* OrderBook compare */}

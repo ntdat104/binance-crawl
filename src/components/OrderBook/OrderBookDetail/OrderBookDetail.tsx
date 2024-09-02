@@ -18,14 +18,6 @@ const OrderBookDetail: React.FC<Props> = (props): JSX.Element => {
     () => (display === "bids" ? bids : asks),
     [bids, asks, display]
   );
-  const color = React.useMemo(
-    () => (display === "bids" ? "#2ebd85" : "#f6465d"),
-    [display]
-  );
-  const bgColor = React.useMemo(
-    () => (display === "bids" ? "#2ebd851a" : "#f6465e1a"),
-    [display]
-  );
 
   const renderTooltipContent = (value: string[][], index: number) => {
     const newValue = [...value].slice(0, index + 1);
@@ -87,18 +79,29 @@ const OrderBookDetail: React.FC<Props> = (props): JSX.Element => {
           <div
             className={clsx(
               "flex items-center h-5 cursor-pointer relative before:content-[''] before:absolute before:w-full before:h-full",
-              `first:before:bg-[${bgColor}]`,
-              Number(item[0]) * Number(item[1]) > 10000 &&
-                `before:bg-[${bgColor}]`,
-              index <= currentIndex && "bg-[#2b313966]",
-              index === currentIndex &&
-                `${
-                  display === "bids" ? "border-b" : "border-t"
-                } border-dashed border-[#474d577c]`
+              {
+                "first:before:bg-[#f6465e1a]": display === "asks",
+                "first:before:bg-[#2ebd851a]": display === "bids",
+                "before:bg-[#f6465e1a]":
+                  display === "asks" &&
+                  Number(item[0]) * Number(item[1]) > 10000,
+                "before:bg-[#2ebd851a]":
+                  display === "bids" &&
+                  Number(item[0]) * Number(item[1]) > 10000,
+                "bg-[#2b313966]": index <= currentIndex,
+                "border-dashed border-[#474d577c]": index === currentIndex,
+                "border-b": index === currentIndex && display === "bids",
+                "border-t": index === currentIndex && display === "asks",
+              }
             )}
             key={index}
           >
-            <span className={`text-[${color}] text-xs w-1/3 text-left`}>
+            <span
+              className={clsx("text-xs w-1/3 text-left", {
+                "text-[#2ebd85]": display === "bids",
+                "text-[#f6465d]": display === "asks",
+              })}
+            >
               {formatPrice(item[0], 2)}
             </span>
             <span className="text-[#eaecef] text-xs w-1/3 text-right">
