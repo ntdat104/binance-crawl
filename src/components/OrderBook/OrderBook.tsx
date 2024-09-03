@@ -1,3 +1,4 @@
+import mainAxios from "@/api/main-axios";
 import ArrowDownIcon from "@/components/icons/ArrowDownIcon";
 import ArrowDownRedIcon from "@/components/icons/ArrowDownRedIcon";
 import ArrowRightIcon from "@/components/icons/ArrowRightIcon";
@@ -6,9 +7,9 @@ import BuyOrderIcon from "@/components/icons/BuyOrderIcon";
 import BuySellOrderIcon from "@/components/icons/BuySellOrderIcon";
 import SellOrderIcon from "@/components/icons/SellOrderIcon";
 import ThreeDotIcon from "@/components/icons/ThreeDotIcon";
+import { useAppSelector } from "@/redux/hook";
 import { setDocumentTitle } from "@/utils/document";
 import { formatPrice } from "@/utils/format-price";
-import WebsocketService from "@/utils/websocket";
 import {
   Checkbox,
   Dropdown,
@@ -57,7 +58,10 @@ interface Props extends React.ComponentPropsWithoutRef<"div"> {}
 const OrderBook: React.FC<Props> = (props): JSX.Element => {
   const { className, ...rest } = props;
 
-  const [size] = React.useState(20);
+  const ws = useAppSelector((state) => state.websocket.ws);
+  const symbol = useAppSelector((state) => state.websocket.symbol);
+
+  const [size] = React.useState(100);
 
   const [tabOrder, setTabOrder] = React.useState(1);
   const [tick, setTick] = React.useState(0.01);
@@ -70,27 +74,26 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
   React.useEffect(() => {
     (async () => {
       try {
-        const response = await fetch(
-          `https://api.binance.com/api/v3/ticker/tradingDay?symbols=["BTCUSDT"]`
+        const data = await mainAxios.get(
+          `/api/v3/ticker/tradingDay?symbols=["${symbol}"]`
         );
-        const data = await response.json();
         setSymbolInfo(data[0]);
         setDocumentTitle(
-          `${formatPrice(data[0].lastPrice, 2)} | BTCUSDT | Binance Spot`
+          `${formatPrice(data[0].lastPrice, 2)} | ${symbol} | Binance Spot`
         );
       } catch (error) {
         console.log(error);
       }
     })();
-  }, []);
+  }, [symbol]);
 
   React.useEffect(() => {
     (async () => {
       try {
-        const response = await fetch(
-          `https://www.binance.com/api/v1/depth?symbol=BTCUSDT&limit=${1000}`
-        );
-        const data = await response.json();
+        const data: {
+          asks: string[][];
+          bids: string[][];
+        } = await mainAxios.get(`/api/v1/depth?symbol=${symbol}&limit=${1000}`);
         const asks = {};
         const bids = {};
         data.asks.forEach((item) => {
@@ -104,36 +107,25 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
         console.log(error);
       }
     })();
-  }, []);
+  }, [symbol]);
 
   React.useEffect(() => {
-    const ws = new WebsocketService({
-      url: `wss://stream.binance.com/stream`,
-    });
-
-    ws.connect();
-
-    const params = ["btcusdt@kline_1m", "btcusdt@depth"];
-
-    const subscriber = ws.addSubscriber({
-      id: "OrderBook",
-      params,
-    });
+    const subscriber = ws.addSubscriber("OrderBook");
 
     subscriber.send(
       JSON.stringify({
         method: "SUBSCRIBE",
-        params,
+        params: [
+          `${symbol.toLowerCase()}@kline_1m`,
+          `${symbol.toLowerCase()}@depth`,
+        ],
         id: 1,
       })
     );
 
     subscriber.subscribe((event: MessageEvent<any>) => {
       const message = JSON.parse(event.data);
-      if (
-        message?.data?.e === "depthUpdate" &&
-        message?.data?.s === "BTCUSDT"
-      ) {
+      if (message?.data?.e === "depthUpdate" && message?.data?.s === symbol) {
         setDepth((depth) => {
           const asks = { ...depth.asks };
           const bids = { ...depth.bids };
@@ -150,10 +142,12 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
       if (
         message?.data?.e === "kline" &&
         message?.data?.k?.i === "1m" &&
-        message?.data?.k?.s === "BTCUSDT"
+        message?.data?.k?.s === symbol
       ) {
         const kline = message?.data?.k;
-        setDocumentTitle(`${formatPrice(kline.c, 2)} | BTCUSDT | Binance Spot`);
+        setDocumentTitle(
+          `${formatPrice(kline.c, 2)} | ${symbol} | Binance Spot`
+        );
         setSymbolInfo((symbolInfo) => {
           if (!symbolInfo) return;
           return {
@@ -164,7 +158,11 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
         });
       }
     });
-  }, []);
+
+    return () => {
+      subscriber.unsubscribe();
+    };
+  }, [symbol]);
 
   const asks = React.useMemo(() => {
     const asksKey = Object.keys(depth.asks);
@@ -331,7 +329,12 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
 
       {/* OrderBook sell-content */}
       {(tabOrder === 1 || tabOrder === 3) && (
-        <OrderBookDetail display="asks" asks={asks} bids={bids} />
+        <OrderBookDetail
+          tabOrder={tabOrder}
+          display="asks"
+          asks={asks}
+          bids={bids}
+        />
       )}
 
       {/* OrderBook ticker */}
@@ -367,7 +370,12 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
 
       {/* OrderBook buy-content */}
       {(tabOrder === 1 || tabOrder === 2) && (
-        <OrderBookDetail display="bids" bids={bids} asks={asks} />
+        <OrderBookDetail
+          tabOrder={tabOrder}
+          display="bids"
+          bids={bids}
+          asks={asks}
+        />
       )}
 
       {/* OrderBook compare */}

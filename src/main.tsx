@@ -1,13 +1,14 @@
+import { store } from "@/redux/store.ts";
 import "@/styles/_global.css";
 import { NextUIProvider } from "@nextui-org/react";
-import React from "react";
 import ReactDOM from "react-dom/client";
+import { Provider } from "react-redux";
 import App from "./App.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.Fragment>
+  <Provider store={store}>
     <NextUIProvider>
       <App />
     </NextUIProvider>
-  </React.Fragment>
+  </Provider>
 );

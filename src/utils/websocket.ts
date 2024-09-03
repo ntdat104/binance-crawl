@@ -1,15 +1,15 @@
-import { interval, timeout } from "./observable";
+import { interval, Subscription, timeout } from "./observable";
 
 enum ReadyStateEnum {
-  "CONNECTING" = 0,
-  "OPEN" = 1,
-  "CLOSING" = 2,
-  "CLOSED" = 3,
+  CONNECTING = 0,
+  OPEN = 1,
+  CLOSING = 2,
+  CLOSED = 3,
 }
 
 type Option = {
   url: string | URL;
-  protocols?: string | string[] | undefined;
+  protocols?: string | string[];
 };
 
 type Subscriber = {
@@ -23,10 +23,10 @@ type QueueMessage = string | ArrayBufferLike | Blob | ArrayBufferView;
 class WebsocketService {
   private ws?: WebSocket;
   private url: string | URL;
-  private protocols?: string | string[] | undefined;
+  private protocols?: string | string[];
   private queueMessage: QueueMessage[] = [];
-  private params: string[] = [];
   private subscribers: Record<string, Subscriber> = {};
+  private interval$?: Subscription;
 
   constructor(options: Option) {
     this.url = options.url;
@@ -34,90 +34,136 @@ class WebsocketService {
   }
 
   public connect() {
-    if (!this.ws || this.ws.readyState === ReadyStateEnum.CLOSED) {
-      this.ws = new WebSocket(this.url, this.protocols);
+    if (
+      this.ws?.readyState !== ReadyStateEnum.CLOSED &&
+      this.ws?.readyState !== undefined
+    )
+      return;
 
-      this.ws.addEventListener("open", async (_ev: Event) => {
-        // console.log("Websocket is connected");
-        if (this.params.length) {
-          this.ws?.send(
-            JSON.stringify({
-              method: "SUBSCRIBE",
-              params: this.params,
-              id: 1,
-            })
-          );
-        }
-      });
+    this.ws = new WebSocket(this.url, this.protocols);
 
-      this.ws.addEventListener("error", (_ev: Event) => {
-        // console.log("Websocket is error", ev);
-      });
+    this.ws.addEventListener("open", () => {});
 
-      this.ws.addEventListener("close", (_ev: CloseEvent) => {
-        // console.log("Websocket is closed");
-        interval$.unsubscribe();
-        timeout(2000).subscribe(() => {
-          this.connect();
-        });
-      });
+    this.ws.addEventListener("error", (_: Event) => {});
 
-      this.ws.addEventListener("message", (ev: MessageEvent<any>) => {
-        for (const id in this.subscribers) {
-          this.subscribers[id].callback(ev);
-        }
-      });
+    this.ws.addEventListener("close", () => {
+      this.cleanup();
+      timeout(2000).subscribe(() => this.connect());
+    });
 
-      const interval$ = interval(1000).subscribe(() => {
+    this.ws.addEventListener("message", (ev: MessageEvent<any>) => {
+      Object.values(this.subscribers).forEach((subscriber) =>
+        subscriber.callback(ev)
+      );
+    });
+
+    this.interval$ = interval(400).subscribe(() => {
+      if (this.ws?.readyState === ReadyStateEnum.OPEN) {
         const request = this.queueMessage.shift();
         if (request) {
           this.ws?.send(request);
         }
-      });
-    }
+      }
+    });
   }
 
-  public send(data: QueueMessage) {
-    try {
-      const request = JSON.parse(data as string);
-      const params: string[] = [];
-      if (request?.params) {
-        request?.params?.forEach((param: string) => {
-          if (!this.params.includes(param)) {
-            this.params.push(param);
-            params.push(param);
-          }
-        });
-      }
-      request["params"] = params;
-      if (request?.params?.length > 0) {
-        this.queueMessage.push(JSON.stringify(request));
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  public addSubscriber({ id, params }: { id: string; params: string[] }) {
-    this.subscribers[id] = {
+  public addSubscriber(id: string) {
+    const subscriber: Subscriber = {
       id,
-      params,
+      params: [],
       callback: () => null,
     };
+    this.subscribers[id] = subscriber;
+
     return {
-      send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) =>
-        this.send(data),
+      send: (data: QueueMessage) => this.send(id, data),
       subscribe: (callback: (ev: MessageEvent<any>) => void) => {
-        this.subscribers[id] = {
-          ...this.subscribers[id],
-          callback,
-        };
+        this.subscribers[id].callback = callback;
+      },
+      unsubscribe: () => {
+        this.unsubscribe(id);
       },
     };
   }
 
   public unsubscribe(id: string) {
+    const allOldParams = this.getAllParamSubscribers();
+    this.subscribers[id].params = [];
+    const allNewParams = this.getAllParamSubscribers();
+
+    const unsubParams: string[] = [];
+    allOldParams.forEach((param) => {
+      if (!allNewParams.includes(param)) {
+        unsubParams.push(param);
+      }
+    });
+    if (unsubParams.length > 0) {
+      this.queueMessage.push(
+        JSON.stringify({
+          method: "UNSUBSCRIBE",
+          params: unsubParams,
+          id: 1,
+        })
+      );
+    }
     delete this.subscribers[id];
+  }
+
+  private send(id: string, data: QueueMessage) {
+    try {
+      const request = typeof data === "string" ? JSON.parse(data) : data;
+
+      if (request?.method === "UNSUBSCRIBE") {
+        let subscriberParams = this.subscribers[id]?.params;
+        if (subscriberParams) {
+          request?.params?.forEach((param: string) => {
+            subscriberParams = subscriberParams?.filter((c) => c !== param);
+          });
+          this.subscribers[id].params = subscriberParams;
+
+          const allParams = this.getAllParamSubscribers();
+          const unsubParams: string[] = [];
+          request?.params?.forEach((param: string) => {
+            if (!allParams.includes(param)) {
+              unsubParams.push(param);
+            }
+          });
+          if (unsubParams.length > 0) {
+            this.queueMessage.push(
+              JSON.stringify({ ...request, params: unsubParams })
+            );
+          }
+        }
+      } else {
+        const subscriberParams = this.subscribers[id]?.params;
+        if (subscriberParams) {
+          request?.params?.forEach((param: string) => {
+            if (!subscriberParams.includes(param)) {
+              subscriberParams.push(param);
+            }
+          });
+          this.subscribers[id].params = subscriberParams;
+        }
+        this.queueMessage.push(data);
+      }
+    } catch (error) {
+      console.error("Failed to send data:", error);
+    }
+  }
+
+  private getAllParamSubscribers() {
+    const params: string[] = [];
+    Object.values(this.subscribers).forEach((subscriber) =>
+      subscriber?.params?.forEach((param) => {
+        if (params.includes(param)) return;
+        params.push(param);
+      })
+    );
+    return params;
+  }
+
+  private cleanup() {
+    this.interval$?.unsubscribe();
   }
 }
 
