@@ -350,7 +350,7 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
             "text-[#f6465d]": symbolInfo && symbolInfo?.isDown,
           })}
         >
-          {symbolInfo && formatPrice(symbolInfo?.lastPrice, 2)}
+          {symbolInfo && formatPrice(symbolInfo?.lastPrice)}
         </span>
         <div className="size-4">
           {symbolInfo && !symbolInfo?.isDown && (
