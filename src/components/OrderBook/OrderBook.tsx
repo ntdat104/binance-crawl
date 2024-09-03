@@ -361,7 +361,7 @@ const OrderBook: React.FC<Props> = (props): JSX.Element => {
           )}
         </div>
         <span className="text-[#848e9c] text-xs ml-1">
-          ${symbolInfo && formatPrice(symbolInfo?.lastPrice, 2)}
+          ${symbolInfo && formatPrice(symbolInfo?.lastPrice)}
         </span>
         <div className="size-4 ml-auto">
           <ArrowRightIcon className="fill-[#848E9C] hover:fill-white cursor-pointer" />
