@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface WebsocketState {
   ws: WebsocketService;
+  wsf: WebsocketService;
   connected: boolean;
   symbol: string;
   interval: string;
@@ -11,6 +12,9 @@ export interface WebsocketState {
 const initialState: WebsocketState = {
   ws: new WebsocketService({
     url: import.meta.env.VITE_BASE_BINANCE_STREAM,
+  }),
+  wsf: new WebsocketService({
+    url: import.meta.env.VITE_BASE_BINANCE_FSTREAM,
   }),
   connected: false,
   symbol: "BTCUSDT",
@@ -24,6 +28,7 @@ export const websocketSlice = createSlice({
     connect: (state: any) => {
       if (!state.connected) {
         state.ws.connect();
+        state.wsf.connect();
         state.connected = true;
       }
     },

@@ -1,20 +1,21 @@
-import OrderBook from "@/components/OrderBook";
+import { useAppDispatch } from "@/redux/hook";
 import React from "react";
-import { useAppSelector } from "@/redux/hook";
-import Chart from "@/components/Chart";
+import AggSnap from "./components/AggSnap";
+import { connect } from "./redux/slice/websocket-slice";
 
 const App: React.FC = (): JSX.Element => {
-  const ws = useAppSelector((state) => state.websocket.ws);
+  const dispatch = useAppDispatch();
 
   React.useEffect(() => {
-    ws.connect();
+    dispatch(connect());
   }, []);
 
   return (
     <main className="dark">
       <div className="flex">
-        <OrderBook className="!w-80 min-w-80 h-screen" />
-        <Chart />
+        {/* <OrderBook className="!w-80 min-w-80 h-screen" /> */}
+        {/* <Chart /> */}
+        <AggSnap />
       </div>
     </main>
   );
