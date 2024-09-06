@@ -1,8 +1,10 @@
 import { useAppSelector } from "@/redux/hook";
-import { Chart, dispose, init } from "klinecharts";
+import { Chart, dispose, init, LoadDataParams, Nullable } from "klinecharts";
 import React from "react";
 
 const KlineChart: React.FC = (): JSX.Element => {
+  const symbol = useAppSelector((state) => state.websocket.symbol);
+  const interval = useAppSelector((state) => state.websocket.interval);
   const ws = useAppSelector((state) => state.websocket.ws);
 
   const chart = React.useRef<Chart>();
@@ -14,6 +16,22 @@ const KlineChart: React.FC = (): JSX.Element => {
     chart.current.createIndicator("VOL");
     chart.current.createIndicator("MACD");
 
+    chart.current.loadMore((timestamp: Nullable<number>) => {
+      if (!timestamp) return;
+      (async () => {
+        try {
+          const klineData = await getBinanceData(
+            symbol,
+            interval,
+            1000,
+            timestamp
+          );
+          chart.current?.applyMoreData(klineData, true);
+        } catch (error) {
+          console.log(error);
+        }
+      })();
+    });
     return () => {
       dispose("k-line-chart");
     };
@@ -23,8 +41,8 @@ const KlineChart: React.FC = (): JSX.Element => {
     (async () => {
       try {
         const data = await getBinanceData(
-          "BTCUSDT",
-          "1m",
+          symbol,
+          interval,
           1000,
           new Date().getTime()
         );
@@ -41,7 +59,7 @@ const KlineChart: React.FC = (): JSX.Element => {
     subscriber.send(
       JSON.stringify({
         method: "SUBSCRIBE",
-        params: ["btcusdt@kline_1m"],
+        params: [`${symbol.toLowerCase()}@kline_${interval}`],
         id: 1,
       })
     );
@@ -50,8 +68,8 @@ const KlineChart: React.FC = (): JSX.Element => {
       const message = JSON.parse(event.data);
       if (
         message?.data?.e === "kline" &&
-        message?.data?.k?.i === "1m" &&
-        message?.data?.k?.s === "BTCUSDT"
+        message?.data?.k?.i === interval &&
+        message?.data?.k?.s === symbol
       ) {
         const kline = message?.data?.k;
         const bar = {
@@ -92,7 +110,7 @@ const KlineChart: React.FC = (): JSX.Element => {
     }));
   };
 
-  return <div id="k-line-chart" style={{ height: "100vh" }} />;
+  return <div id="k-line-chart" className="w-full h-screen" />;
 };
 
 export default KlineChart;
