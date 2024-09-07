@@ -18,7 +18,7 @@ interface Props extends React.ComponentPropsWithoutRef<"div"> {}
 const AggSnap: React.FC<Props> = (props): JSX.Element => {
   const { className, ...rest } = props;
   const wsf = useAppSelector((state) => state.websocket.wsf);
-  const [symbol] = React.useState("BTCUSDT");
+  const symbol = useAppSelector((state) => state.websocket.symbol);
   const [aggSnap, setAggSnap] = React.useState<AggTrades[]>([]);
 
   const aggSnapRef = React.useRef<HTMLDivElement>(null);
@@ -41,7 +41,12 @@ const AggSnap: React.FC<Props> = (props): JSX.Element => {
         setAggSnap((aggSnap) => [data, ...aggSnap]);
       }
     });
-  }, []);
+
+    return () => {
+      setAggSnap([]);
+      subscriber.unsubscribe();
+    };
+  }, [symbol]);
 
   return (
     <div
