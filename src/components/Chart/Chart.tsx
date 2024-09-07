@@ -226,25 +226,6 @@ const Chart: React.FC<Props> = (props): JSX.Element => {
         "volume.color.0": "#F6465D",
         "volume.color.1": "#2EBD85",
       });
-
-      const chart = tvWidget.current?.activeChart();
-      [
-        { length: 7, color: "#FF9800" },
-        { length: 25, color: "#3179F5" },
-        { length: 99, color: "#4CAF50" },
-      ].forEach((item) => {
-        chart?.createStudy(
-          "Moving Average Exponential",
-          true,
-          false,
-          {
-            length: item.length,
-          },
-          {
-            "Plot.color": item.color,
-          }
-        );
-      });
     });
   }, []);
 
