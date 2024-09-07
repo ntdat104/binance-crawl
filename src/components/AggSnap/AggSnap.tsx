@@ -1,5 +1,6 @@
 import { useAppSelector } from "@/redux/hook";
 import { formatPrice } from "@/utils/format-price";
+import clsx from "clsx";
 import dayjs from "dayjs";
 import List from "rc-virtual-list";
 import React from "react";
@@ -12,10 +13,15 @@ type AggTrades = {
   T: number;
 };
 
-const AggSnap: React.FC = (): JSX.Element => {
+interface Props extends React.ComponentPropsWithoutRef<"div"> {}
+
+const AggSnap: React.FC<Props> = (props): JSX.Element => {
+  const { className, ...rest } = props;
   const wsf = useAppSelector((state) => state.websocket.wsf);
   const [symbol] = React.useState("BTCUSDT");
   const [aggSnap, setAggSnap] = React.useState<AggTrades[]>([]);
+
+  const aggSnapRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const subscriber = wsf.addSubscriber("AggSnap");
@@ -38,9 +44,13 @@ const AggSnap: React.FC = (): JSX.Element => {
   }, []);
 
   return (
-    <div className="border border-solid border-[#2B3139]">
+    <div
+      ref={aggSnapRef}
+      className={clsx("border border-solid border-[#2B3139]", className)}
+      {...rest}
+    >
       <div className="px-4 h-[44px] flex items-center border-b border-solid border-[#2B3139]">
-        <span className="text-sm text-[#eaecef]">{`Giao dịch`}</span>
+        <span className="text-sm text-[#eaecef]">{`Giao dịch (Future)`}</span>
       </div>
       <div className="w-[300px] pb-3">
         <div className="flex items-center px-4 pt-[8px] pb-[4px]">
@@ -50,7 +60,11 @@ const AggSnap: React.FC = (): JSX.Element => {
         </div>
         <List
           data={aggSnap}
-          height={200}
+          height={
+            aggSnapRef.current?.clientHeight
+              ? aggSnapRef.current?.clientHeight - 90
+              : 200
+          }
           itemHeight={30}
           itemKey="AggSnap"
           styles={{

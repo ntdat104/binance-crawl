@@ -14,12 +14,17 @@ import { customCSS } from "@/utils/custom-css";
 import { fetchNews, getParameterByName } from "@/utils/chart";
 import { formatPrice } from "@/utils/format-price";
 import { useAppDispatch, useAppSelector } from "@/redux/hook";
-import { setSymbol } from "@/redux/slice/websocket-slice";
+import { setInterval, setSymbol } from "@/redux/slice/websocket-slice";
+import clsx from "clsx";
 
-const Chart: React.FC = (): JSX.Element => {
+interface Props extends React.ComponentPropsWithoutRef<"div"> {}
+
+const Chart: React.FC<Props> = (props): JSX.Element => {
+  const { className, ...rest } = props;
   const dispatch = useAppDispatch();
   const ws = useAppSelector((state) => state.websocket.ws);
 
+  const chartRef = React.useRef<HTMLDivElement>(null);
   const tvWidget = React.useRef<IChartingLibraryWidget>();
 
   React.useEffect(() => {
@@ -32,11 +37,13 @@ const Chart: React.FC = (): JSX.Element => {
       window.matchMedia("(prefers-color-scheme: dark)").matches;
     const theme = getParameterByName("theme") || (isDark ? "dark" : "light");
     tvWidget.current = new widget({
+      width: chartRef.current?.clientWidth,
+      height: chartRef.current?.clientHeight,
       debug: false,
-      fullscreen: true,
+      fullscreen: false,
       symbol: "BTCUSDT",
       interval: "1d" as ResolutionString,
-      container: "tv_chart_container",
+      container: chartRef.current as any,
       //	BEWARE: no trailing slash is expected in feed URL
       datafeed: new BinanceDatafeed({ ws: ws }),
       library_path: "static/charting_library/",
@@ -171,14 +178,34 @@ const Chart: React.FC = (): JSX.Element => {
 
   React.useEffect(() => {
     tvWidget.current?.onChartReady(() => {
-      tvWidget.current
-        ?.activeChart()
-        .onSymbolChanged()
-        .subscribe(null, () => {
-          dispatch(
-            setSymbol(tvWidget.current?.activeChart().symbol() as string)
-          );
-        });
+      const activeChart = tvWidget.current?.activeChart();
+      activeChart?.onSymbolChanged().subscribe(null, () => {
+        dispatch(setSymbol(tvWidget.current?.activeChart().symbol() as string));
+      });
+      activeChart?.onIntervalChanged().subscribe(null, () => {
+        const resolution = tvWidget.current?.activeChart().resolution() as any;
+        const interval = {
+          1: "1m",
+          3: "3m",
+          5: "5m",
+          15: "15m",
+          30: "30m",
+          60: "1h",
+          120: "2h",
+          240: "4h",
+          360: "6h",
+          480: "8h",
+          720: "12h",
+          D: "1d",
+          "1D": "1d",
+          "3D": "3d",
+          W: "1w",
+          "1W": "1w",
+          M: "1M",
+          "1M": "1M",
+        }[resolution];
+        dispatch(setInterval(interval as string));
+      });
     });
   }, []);
 
@@ -221,7 +248,13 @@ const Chart: React.FC = (): JSX.Element => {
     });
   }, []);
 
-  return <div id="tv_chart_container" className="w-full" />;
+  return (
+    <div
+      ref={chartRef}
+      className={clsx("w-full h-full", className)}
+      {...rest}
+    />
+  );
 };
 
 export default Chart;
