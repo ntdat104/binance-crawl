@@ -18,6 +18,7 @@
     "axios": "^1.7.7",
     "dayjs": "^1.11.13",
     "framer-motion": "^11.3.31",
+    "klinecharts": "^9.8.10",
     "rc-virtual-list": "^3.14.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

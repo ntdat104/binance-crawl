@@ -27,6 +27,7 @@ class WebsocketService {
   private queueMessage: QueueMessage[] = [];
   private subscribers: Record<string, Subscriber> = {};
   private interval$?: Subscription;
+  private params: string[] = [];
 
   constructor(options: Option) {
     this.url = options.url;
@@ -59,9 +60,26 @@ class WebsocketService {
 
     this.interval$ = interval(400).subscribe(() => {
       if (this.ws?.readyState === ReadyStateEnum.OPEN) {
-        const request = this.queueMessage.shift();
+        const request = this.queueMessage.shift() as string;
         if (request) {
-          this.ws?.send(request);
+          const requestJson = JSON.parse(request);
+          if (requestJson?.event === 'SUBSCRIBE') {
+            const params = requestJson?.params;
+            const subParams: string[] = [];
+            params?.forEach((param) => {
+              if (!this.params.includes(param)) {
+                this.params.push(param);
+                subParams.push(param);
+              }
+            });
+            if (subParams.length > 0) {
+              this.ws?.send(
+                JSON.stringify({ ...requestJson, params: subParams })
+              );
+            }
+          } else {
+            this.ws?.send(request);
+          }
         }
       }
     });
@@ -105,6 +123,9 @@ class WebsocketService {
           id: 1,
         })
       );
+      unsubParams.forEach((param) => {
+        this.params = this.params.filter((c) => c !== param);
+      });
     }
     delete this.subscribers[id];
   }

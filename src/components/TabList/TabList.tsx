@@ -3,15 +3,41 @@ const TabList = () => {
 
   return (
     <div className="flex flex-wrap gap-4">
-        <Tabs variant='underlined' aria-label="Tabs variants">
-          <Tab key="vithe" title="Vị thế (0)" />
-          <Tab key="gdckl" title="Giao dịch chờ khớp lệnh"/>
-          <Tab key="lsl" title="Lịch sử lệnh"/>
-          <Tab key="lsgd" title="Lịch sử giao dịch"/>
-          <Tab key="lssd" title="Lịch sử số dư"/>
-          <Tab key="lsvt" title="Lịch sử vị thế"/>
-          <Tab key="cl" title="Chiến lược"/>
-          <Tab key="ts" title="Tài sản"/>
+        <Tabs color={"warning"} variant='underlined' aria-label="Tabs variants">
+          <Tab key="vithe"  title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Vị thế (0)`}</span>
+              }
+            />
+          <Tab key="gdckl" title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Giao dịch chờ khớp lệnh`}</span>
+              } />
+        <Tab key="lsl" 
+          title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Lịch sử lệnh`}</span>
+              }
+        />
+        <Tab key="lsgd" 
+           title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Lịch sử giao dịch`}</span>
+              }
+        />
+        <Tab key="lssd" 
+           title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Lịch sử số dư`}</span>
+              }
+        />
+          <Tab key="lsvt" title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Lịch sử vị thế`}</span>
+              }/>
+        <Tab key="cl" 
+        title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Chiến lược`}</span>
+              }/>
+        <Tab key="ts"
+          title={
+                <span className="text-sm font-bold text-[#ffffff]">{`Tài sản`}</span>
+              }
+        />
         </Tabs>
     </div>
   );
