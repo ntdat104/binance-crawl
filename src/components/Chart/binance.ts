@@ -27,6 +27,7 @@ class BinanceDatafeed {
   private binanceHost: string;
   private debug: boolean;
   private ws: WebsocketService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private symbols: any = {};
   private count: number = 1;
 

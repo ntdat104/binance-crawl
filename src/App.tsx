@@ -7,6 +7,7 @@ import OrderBook from "./components/OrderBook";
 import Chart from "./components/Chart";
 import { Tab, Tabs } from "@nextui-org/react";
 import OrderForm from "./components/OrderForm";
+import TabList from "./components/TabList";
 
 const App: React.FC = (): JSX.Element => {
   const dispatch = useAppDispatch();
@@ -65,6 +66,7 @@ const App: React.FC = (): JSX.Element => {
           <AggTrade className="h-3/5" />
         </div>
       </div>
+        <TabList/>
     </main>
   );
 };
